@@ -81,7 +81,7 @@ export function makeTheme(dark: boolean): Theme {
       accent:      "#C6F24E",
       accentFg:    "#0A0A0B",
       effortColor: "#C6F24E",
-      restColor:   "#5A5A63",
+      restColor:   "#7DD3FC",
       readyColor:  "#A0A0A8",
     };
   }
@@ -100,7 +100,7 @@ export function makeTheme(dark: boolean): Theme {
     accent:      "#4338CA",
     accentFg:    "#FFFFFF",
     effortColor: "#4338CA",
-    restColor:   "#818CF8",
+      restColor:   "#0369A1",
     readyColor:  "#6B7280",
   };
 }
