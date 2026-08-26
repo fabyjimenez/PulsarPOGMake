@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion } from "motion/react";
 import { X, Share2, Download, Camera } from "lucide-react";
 import type { Theme, CompletionInfo } from "../theme";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 function fmtDur(s: number): string {
   const h = Math.floor(s / 3600);
@@ -149,8 +150,11 @@ interface Props {
 
 export default function ShareModal({ info, t, onClose }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [bgImage, setBgImage] = useState<HTMLImageElement | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const handleClose = useCallback(() => onClose(), [onClose]);
+  useFocusTrap(true, dialogRef, handleClose);
 
   useEffect(() => {
     if (canvasRef.current) drawShareCard(canvasRef.current, info, bgImage);
@@ -202,16 +206,17 @@ export default function ShareModal({ info, t, onClose }: Props) {
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 68, borderRadius: 40 }}
+        style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.72)", zIndex: 68, borderRadius: "var(--frame-radius)" }}
       />
 
       <motion.div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Share your workout"
         initial={{ y: 500, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 500, opacity: 0 }}
         transition={{ type: "spring", damping: 30, stiffness: 280 }}
-        style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: t.surface, borderTop: `1px solid ${t.hairline}`, borderRadius: "28px 28px 40px 40px", zIndex: 69, padding: "22px 20px 36px", boxSizing: "border-box" }}
+        style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: t.surface, borderTop: `1px solid ${t.hairline}`, borderRadius: "28px 28px var(--frame-radius) var(--frame-radius)", zIndex: 69, padding: "22px 20px max(36px, env(safe-area-inset-bottom, 36px))", boxSizing: "border-box" }}
       >
         {/* Handle */}
         <div style={{ width: 36, height: 4, borderRadius: 2, background: t.hairline, margin: "0 auto 18px" }} />

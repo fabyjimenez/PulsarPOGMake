@@ -1,6 +1,8 @@
+import { useCallback, useRef } from "react";
 import { motion } from "motion/react";
 import { CheckCircle, RotateCcw, Share2 } from "lucide-react";
 import type { Theme, CompletionInfo } from "../theme";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 function fmtDur(s: number): string {
   const h = Math.floor(s / 3600);
@@ -20,6 +22,10 @@ interface Props {
 }
 
 export default function CompletionSummary({ info, t, onTryAgain, onDone, onShare }: Props) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const handleEscape = useCallback(() => onTryAgain(), [onTryAgain]);
+  useFocusTrap(true, dialogRef, handleEscape);
+
   const effortSecs = info.effortSecs ?? info.totalSecs;
   const restSecs   = info.restSecs   ?? 0;
 
@@ -36,11 +42,12 @@ export default function CompletionSummary({ info, t, onTryAgain, onDone, onShare
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-        style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 50, borderRadius: 40, backdropFilter: "blur(8px)" }}
+        style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.78)", zIndex: 50, borderRadius: "var(--frame-radius)", backdropFilter: "blur(8px)" }}
       />
 
       {/* Card — slides up */}
       <motion.div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="completion-heading"
@@ -48,7 +55,7 @@ export default function CompletionSummary({ info, t, onTryAgain, onDone, onShare
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: 40, scale: 0.97 }}
         transition={{ type: "spring", damping: 26, stiffness: 260 }}
-        style={{ position: "absolute", left: 16, right: 16, bottom: 24, background: t.card, borderRadius: 28, padding: "28px 22px 22px", zIndex: 60, border: `1px solid ${t.hairline}`, boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
+        style={{ position: "absolute", left: 16, right: 16, bottom: "max(24px, env(safe-area-inset-bottom, 24px))", background: t.card, borderRadius: 28, padding: "28px 22px 22px", zIndex: 60, border: `1px solid ${t.hairline}`, boxShadow: "0 24px 80px rgba(0,0,0,0.6)" }}
       >
         {/* Header */}
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 22 }}>
