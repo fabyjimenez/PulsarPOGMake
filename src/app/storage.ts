@@ -5,6 +5,7 @@ const PREFIX = "pulsar.pog.";
 
 export interface PulsarStore {
   dark: boolean;
+  onboardingComplete: boolean;
   presets: Preset[];
   plans: Plan[];
   history: SessionRecord[];
@@ -15,6 +16,7 @@ export interface PulsarStore {
 
 const DEFAULTS: PulsarStore = {
   dark: true,
+  onboardingComplete: false,
   presets: [],
   plans: [],
   history: [],
@@ -44,6 +46,7 @@ function writeKey(key: string, value: unknown) {
 export function loadStore(): PulsarStore {
   return {
     dark: readKey("dark", DEFAULTS.dark),
+    onboardingComplete: readKey("onboardingComplete", DEFAULTS.onboardingComplete),
     presets: readKey("presets", DEFAULTS.presets),
     plans: readKey("plans", DEFAULTS.plans),
     history: readKey("history", DEFAULTS.history),

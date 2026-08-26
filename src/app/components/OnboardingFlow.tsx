@@ -68,13 +68,9 @@ export default function OnboardingFlow({ initialDark = true, onComplete }: Onboa
 
   function handleNext() {
     if (step < steps.length - 1) setStep((s) => s + 1);
-    else {
-      saveStorePartial({ dark });
-      onComplete(dark);
-    }
+    else onComplete(dark);
   }
   function handleSkip() {
-    saveStorePartial({ dark });
     onComplete(dark);
   }
 

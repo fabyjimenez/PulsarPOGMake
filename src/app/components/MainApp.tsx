@@ -41,9 +41,10 @@ const NAV_ITEMS = [
 
 interface MainAppProps {
   initialDark?: boolean;
+  onReplayOnboarding?: () => void;
 }
 
-export default function MainApp({ initialDark = true }: MainAppProps) {
+export default function MainApp({ initialDark = true, onReplayOnboarding }: MainAppProps) {
   const [dark, setDark]               = useState(initialDark);
   const [navScreen, setNavScreen]     = useState<NavScreen>("home");
   const [activeMode, setActiveMode]   = useState<WorkoutMode | null>(null);
@@ -316,6 +317,19 @@ export default function MainApp({ initialDark = true }: MainAppProps) {
                     ))}
                   </div>
                 </div>
+
+                {onReplayOnboarding && (
+                  <div style={{ marginBottom: 24 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: t.muted, textTransform: "uppercase" }}>Demo</span>
+                    <button
+                      onClick={() => { setShowMenu(false); onReplayOnboarding(); }}
+                      aria-label="Replay onboarding"
+                      style={{ marginTop: 10, width: "100%", height: 40, borderRadius: 13, border: `1px solid ${t.hairline}`, cursor: "pointer", background: t.card, color: t.text, fontSize: 12, fontWeight: 600, fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }}
+                    >
+                      Replay onboarding
+                    </button>
+                  </div>
+                )}
 
                 {/* Presets */}
                 <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
