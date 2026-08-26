@@ -154,12 +154,14 @@ export default function PlansScreen({ t, plans, onSavePlan, onDeletePlan, onStar
                       </div>
                       <div style={{ display: "flex", gap: 6, flexShrink: 0, marginLeft: 10 }}>
                         <button onClick={() => shareLink(plan)}
+                          aria-label={`Copy share link for ${plan.name}`}
                           style={{ width: 30, height: 30, borderRadius: 9, background: t.btn, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <ChevronRight size={14} color={t.muted} />
+                          <ChevronRight size={14} color={t.muted} aria-hidden="true" />
                         </button>
                         <button onClick={() => onDeletePlan(plan.id)}
+                          aria-label={`Delete plan ${plan.name}`}
                           style={{ width: 30, height: 30, borderRadius: 9, background: t.btn, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Trash2 size={13} color={t.muted} />
+                          <Trash2 size={13} color={t.muted} aria-hidden="true" />
                         </button>
                         <button onClick={() => openDetail(plan)}
                           style={{ height: 30, paddingInline: 10, borderRadius: 9, background: `${t.accent}20`, border: `1px solid ${t.accent}30`, cursor: "pointer", display: "flex", alignItems: "center", gap: 4, color: t.accent, fontSize: 11, fontWeight: 700, fontFamily: "Inter, sans-serif" }}>

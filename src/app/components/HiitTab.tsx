@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   RotateCcw, SkipForward, Pause, Play, Activity, Minus, Plus,
@@ -8,6 +8,7 @@ import {
 import CircleTimer from "./CircleTimer";
 import type { Theme, CompletionInfo, SoundMode } from "../theme";
 import { useVoiceCues } from "../hooks/useVoiceCues";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 export interface Settings {
   effort: number; recover: number; rounds: number;
@@ -129,8 +130,11 @@ export default function HiitTab({
   const [savedFeedback, setSavedFeedback] = useState(false);
   const [announcement, setAnnouncement]   = useState("");
   const inputRef   = useRef<HTMLInputElement>(null);
+  const saveDialogRef = useRef<HTMLDivElement>(null);
   const prevPhase  = useRef<Phase>("empty");
   const cue        = useVoiceCues(soundMode);
+  const closeSaveModal = useCallback(() => setShowSaveModal(false), []);
+  useFocusTrap(showSaveModal, saveDialogRef, closeSaveModal);
 
   useEffect(() => {
     if (showSaveModal) setTimeout(() => inputRef.current?.focus(), 80);
@@ -508,8 +512,9 @@ export default function HiitTab({
         {showSaveModal && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSaveModal(false)}
-              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 50, borderRadius: 40, backdropFilter: "blur(4px)" }} />
+              style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.65)", zIndex: 50, borderRadius: "var(--frame-radius)", backdropFilter: "blur(4px)" }} />
             <motion.div
+              ref={saveDialogRef}
               role="dialog"
               aria-modal="true"
               aria-labelledby="preset-dialog-title"

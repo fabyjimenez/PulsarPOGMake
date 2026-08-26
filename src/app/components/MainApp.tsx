@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { Home, Bookmark, BarChart2, Map, AlignJustify, Music, X, Sun, Moon, Trash2, ChevronRight, ChevronLeft, Star, Minimize2 } from "lucide-react";
 import { makeTheme, SessionRecord, CompletionInfo, SoundMode, Plan, WorkoutDay } from "../theme";
@@ -14,6 +14,9 @@ import WatchTab from "./WatchTab";
 import SprintTab from "./SprintTab";
 import CompletionSummary from "./CompletionSummary";
 import ShareModal from "./ShareModal";
+import PhoneFrame from "./PhoneFrame";
+import { loadStore, saveStorePartial } from "../storage";
+import { useFocusTrap } from "../hooks/useFocusTrap";
 
 type NavScreen   = "home" | "workouts" | "history" | "plans";
 type WorkoutMode = "hiit" | "tabata" | "timer" | "stopwatch" | "sprint";
@@ -38,24 +41,42 @@ const NAV_ITEMS = [
 
 interface MainAppProps {
   initialDark?: boolean;
+  onReplayOnboarding?: () => void;
 }
 
-export default function MainApp({ initialDark = true }: MainAppProps) {
+export default function MainApp({ initialDark = true, onReplayOnboarding }: MainAppProps) {
   const [dark, setDark]               = useState(initialDark);
   const [navScreen, setNavScreen]     = useState<NavScreen>("home");
   const [activeMode, setActiveMode]   = useState<WorkoutMode | null>(null);
-  const [presets, setPresets]         = useState<Preset[]>([]);
-  const [plans, setPlans]             = useState<Plan[]>([]);
-  const [history, setHistory]         = useState<SessionRecord[]>([]);
-  const [favorites, setFavorites]     = useState<string[]>([]);
+  const [presets, setPresets]         = useState<Preset[]>(() => loadStore().presets);
+  const [plans, setPlans]             = useState<Plan[]>(() => loadStore().plans);
+  const [history, setHistory]         = useState<SessionRecord[]>(() => loadStore().history);
+  const [favorites, setFavorites]     = useState<string[]>(() => loadStore().favorites);
   const [pendingPreset, setPendingPreset] = useState<Preset | null>(null);
   const [showMenu, setShowMenu]       = useState(false);
   const [showSound, setShowSound]     = useState(false);
-  const [haptics, setHaptics]         = useState(true);
-  const [soundMode, setSoundMode]     = useState<SoundMode>("voice");
+  const [haptics, setHaptics]         = useState(() => loadStore().haptics);
+  const [soundMode, setSoundMode]     = useState<SoundMode>(() => loadStore().soundMode);
   const [completionData, setCompletionData] = useState<CompletionInfo | null>(null);
   const [showShare, setShowShare]     = useState(false);
   const [bigDisplay, setBigDisplay]   = useState(false);
+
+  const menuRef = useRef<HTMLDivElement>(null);
+  const soundRef = useRef<HTMLDivElement>(null);
+
+  const closeMenu = useCallback(() => setShowMenu(false), []);
+  const closeSound = useCallback(() => setShowSound(false), []);
+
+  useFocusTrap(showMenu, menuRef, closeMenu);
+  useFocusTrap(showSound, soundRef, closeSound);
+
+  useEffect(() => { saveStorePartial({ dark }); }, [dark]);
+  useEffect(() => { saveStorePartial({ presets }); }, [presets]);
+  useEffect(() => { saveStorePartial({ plans }); }, [plans]);
+  useEffect(() => { saveStorePartial({ history }); }, [history]);
+  useEffect(() => { saveStorePartial({ favorites }); }, [favorites]);
+  useEffect(() => { saveStorePartial({ haptics }); }, [haptics]);
+  useEffect(() => { saveStorePartial({ soundMode }); }, [soundMode]);
 
   const t = makeTheme(dark);
 
@@ -112,9 +133,7 @@ export default function MainApp({ initialDark = true }: MainAppProps) {
   function deletePlan(id: string) { setPlans(p => p.filter(x => x.id !== id)); }
 
   return (
-    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: t.bg, fontFamily: "Inter, sans-serif", transition: "background 0.35s" }}>
-      <div style={{ width: 412, height: 860, borderRadius: 40, background: t.surface, boxShadow: t.shadow, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", transition: "background 0.35s, box-shadow 0.35s" }}
-        role="main">
+    <PhoneFrame bg={t.bg} surface={t.surface} shadow={t.shadow}>
 
         {/* ── Header ── */}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "max(28px, env(safe-area-inset-top, 28px)) 24px 16px", flexShrink: 0, borderBottom: `1px solid ${activeMode ? t.hairline : "transparent"}` }}>
@@ -155,7 +174,7 @@ export default function MainApp({ initialDark = true }: MainAppProps) {
         </div>
 
         {/* ── Content ── */}
-        <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", display: "flex", flexDirection: "column", minHeight: 0 }}>
           <AnimatePresence mode="wait">
             {activeMode ? (
               <motion.div key={`mode-${activeMode}`} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -14 }} transition={{ duration: 0.22 }}
@@ -227,7 +246,7 @@ export default function MainApp({ initialDark = true }: MainAppProps) {
         <AnimatePresence>
           {!activeMode && (
             <motion.div initial={{ y: 80, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 80, opacity: 0 }} transition={{ type: "spring", damping: 28, stiffness: 300 }}
-              style={{ flexShrink: 0, padding: "8px 16px 20px", borderTop: `1px solid ${t.hairline}`, background: t.surface }}>
+              style={{ flexShrink: 0, padding: "8px 16px max(20px, env(safe-area-inset-bottom, 20px))", borderTop: `1px solid ${t.hairline}`, background: t.surface }}>
               <div style={{ display: "flex", background: t.card, borderRadius: 18, padding: 5, gap: 2 }} role="tablist" aria-label="Navigation">
                 {NAV_ITEMS.map(item => {
                   const Icon = item.icon;
@@ -270,14 +289,16 @@ export default function MainApp({ initialDark = true }: MainAppProps) {
         <AnimatePresence>
           {showMenu && (
             <>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowMenu(false)}
-                style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 30, borderRadius: 40 }} />
-              <motion.div initial={{ x: 320 }} animate={{ x: 0 }} exit={{ x: 320 }} transition={{ type: "spring", damping: 28, stiffness: 260 }}
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeMenu}
+                style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 30, borderRadius: "var(--frame-radius)" }} />
+              <motion.div
+                ref={menuRef}
+                initial={{ x: 320 }} animate={{ x: 0 }} exit={{ x: 320 }} transition={{ type: "spring", damping: 28, stiffness: 260 }}
                 role="dialog" aria-modal="true" aria-label="Settings"
-                style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: 300, background: t.panel, borderLeft: `1px solid ${t.hairline}`, borderRadius: "0 40px 40px 0", zIndex: 40, padding: "28px 20px 24px", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
+                style={{ position: "absolute", top: 0, right: 0, bottom: 0, width: "min(300px, 100%)", background: t.panel, borderLeft: `1px solid ${t.hairline}`, borderRadius: "0 var(--frame-radius) var(--frame-radius) 0", zIndex: 40, padding: "max(28px, env(safe-area-inset-top, 28px)) 20px max(24px, env(safe-area-inset-bottom, 24px))", boxSizing: "border-box", display: "flex", flexDirection: "column" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
                   <span style={{ fontSize: 15, fontWeight: 800, color: t.text, letterSpacing: "-0.02em" }}>Settings</span>
-                  <button onClick={() => setShowMenu(false)} aria-label="Close settings" style={{ width: 36, height: 36, borderRadius: 9, background: t.card, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <button onClick={closeMenu} aria-label="Close settings" style={{ width: 36, height: 36, borderRadius: 9, background: t.card, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <X size={14} color={t.muted} aria-hidden="true" />
                   </button>
                 </div>
@@ -285,15 +306,30 @@ export default function MainApp({ initialDark = true }: MainAppProps) {
                 {/* Appearance */}
                 <div style={{ marginBottom: 24 }}>
                   <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: t.muted, textTransform: "uppercase" }}>Appearance</span>
-                  <div style={{ marginTop: 10, background: t.card, borderRadius: 13, padding: 4, display: "flex", gap: 4, border: `1px solid ${t.hairline}` }}>
+                  <div style={{ marginTop: 10, background: t.card, borderRadius: 13, padding: 4, display: "flex", gap: 4, border: `1px solid ${t.hairline}` }} role="group" aria-label="Theme">
                     {([{ label: "Dark", icon: Moon, value: true }, { label: "Light", icon: Sun, value: false }] as const).map(({ label, icon: Icon, value }) => (
                       <button key={label} onClick={() => setDark(value)}
+                        aria-pressed={dark === value}
+                        aria-label={`${label} mode`}
                         style={{ flex: 1, height: 36, borderRadius: 9, border: "none", cursor: "pointer", background: dark === value ? t.btn : "transparent", color: dark === value ? t.text : t.muted, fontSize: 11, fontWeight: dark === value ? 700 : 500, fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 5, transition: "all 0.2s" }}>
-                        <Icon size={13} />{label}
+                        <Icon size={13} aria-hidden="true" />{label}
                       </button>
                     ))}
                   </div>
                 </div>
+
+                {onReplayOnboarding && (
+                  <div style={{ marginBottom: 24 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: t.muted, textTransform: "uppercase" }}>Demo</span>
+                    <button
+                      onClick={() => { setShowMenu(false); onReplayOnboarding(); }}
+                      aria-label="Replay onboarding"
+                      style={{ marginTop: 10, width: "100%", height: 40, borderRadius: 13, border: `1px solid ${t.hairline}`, cursor: "pointer", background: t.card, color: t.text, fontSize: 12, fontWeight: 600, fontFamily: "Inter, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.2s" }}
+                    >
+                      Replay onboarding
+                    </button>
+                  </div>
+                )}
 
                 {/* Presets */}
                 <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column" }}>
@@ -338,14 +374,16 @@ export default function MainApp({ initialDark = true }: MainAppProps) {
         <AnimatePresence>
           {showSound && (
             <>
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSound(false)}
-                style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 30, borderRadius: 40 }} />
-              <motion.div initial={{ y: 300 }} animate={{ y: 0 }} exit={{ y: 300 }} transition={{ type: "spring", damping: 28, stiffness: 260 }}
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeSound}
+                style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 30, borderRadius: "var(--frame-radius)" }} />
+              <motion.div
+                ref={soundRef}
+                initial={{ y: 300 }} animate={{ y: 0 }} exit={{ y: 300 }} transition={{ type: "spring", damping: 28, stiffness: 260 }}
                 role="dialog" aria-modal="true" aria-label="Sound and haptics settings"
-                style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: t.panel, borderTop: `1px solid ${t.hairline}`, borderRadius: "0 0 40px 40px", zIndex: 40, padding: "20px 24px 36px", boxSizing: "border-box" }}>
+                style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: t.panel, borderTop: `1px solid ${t.hairline}`, borderRadius: "0 0 var(--frame-radius) var(--frame-radius)", zIndex: 40, padding: "20px 24px max(36px, env(safe-area-inset-bottom, 36px))", boxSizing: "border-box" }}>
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 22 }}>
                   <span style={{ fontSize: 15, fontWeight: 800, color: t.text, letterSpacing: "-0.02em" }}>Sound & Feel</span>
-                  <button onClick={() => setShowSound(false)} aria-label="Close sound settings" style={{ width: 36, height: 36, borderRadius: 9, background: t.card, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <button onClick={closeSound} aria-label="Close sound settings" style={{ width: 36, height: 36, borderRadius: 9, background: t.card, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <X size={14} color={t.muted} aria-hidden="true" />
                   </button>
                 </div>
@@ -368,11 +406,12 @@ export default function MainApp({ initialDark = true }: MainAppProps) {
 
                 <div>
                   <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.1em", color: t.muted, textTransform: "uppercase", marginBottom: 10 }}>Audio cues</div>
-                  <div style={{ display: "flex", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 8 }} role="group" aria-label="Audio cue mode">
                     {SOUND_OPTIONS.map(opt => {
                       const active = soundMode === opt.id;
                       return (
                         <button key={opt.id} onClick={() => setSoundMode(opt.id)}
+                          aria-pressed={active}
                           style={{ flex: 1, height: 42, borderRadius: 11, border: `1.5px solid ${active ? t.accent : t.hairline}`, cursor: "pointer", background: active ? `${t.accent}14` : t.card, color: active ? t.accent : t.muted, fontSize: 12, fontWeight: active ? 700 : 500, fontFamily: "Inter, sans-serif", transition: "all 0.2s" }}>
                           {opt.label}
                         </button>
@@ -385,7 +424,6 @@ export default function MainApp({ initialDark = true }: MainAppProps) {
           )}
         </AnimatePresence>
 
-      </div>
-    </div>
+    </PhoneFrame>
   );
 }
